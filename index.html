@@ -1,0 +1,193 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lucky Wheel Tracker</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Lucky Wheel Tracker" />
+  <link rel="apple-touch-icon" href="icon.png" />
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #fff8dc;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: row;
+      gap: 20px;
+    }
+    .main {
+      flex: 2;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      max-width: 600px;
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 10px;
+      font-size: 14px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      background: #eee;
+    }
+    button:disabled {
+      background: #ccc;
+      color: #888;
+    }
+    .status {
+      font-size: 16px;
+    }
+    .reset {
+      margin-top: 10px;
+      padding: 10px 20px;
+      background: #f44336;
+      color: white;
+      font-weight: bold;
+      border-radius: 10px;
+      border: none;
+      font-size: 16px;
+    }
+    .table-container {
+      flex: 1;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+    }
+    th, td {
+      border: 1px solid #aaa;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background: #f0f0f0;
+    }
+  </style>
+</head>
+<body>
+  <div class="main">
+    <h1>Lucky Wheel Tracker</h1>
+    <div class="grid" id="buttons"></div>
+    <div class="status" id="status"></div>
+    <button class="reset" onclick="resetGame()">Reset</button>
+  </div>
+  <div class="table-container">
+    <h2>Player Outcomes</h2>
+    <table>
+      <thead><tr><th>Player</th><th>Prize</th></tr></thead>
+      <tbody id="playerTable"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const prizes = {
+      "Golden Gumball": { count: 0, max: 1 },
+      "Coin": { count: 0, max: 3 },
+      "Miss A Turn": { count: 0, max: Infinity },
+      "Key": { count: 0, max: 5 },
+      "Remote": { count: 0, max: 1 },
+      "Spin Again": { count: 0, max: Infinity },
+      "Watch": { count: 0, max: 1 },
+      "Steal": { count: 0, max: 1 },
+      "Pick Choice": { count: 0, max: Infinity },
+      "Wildcard Prize": { count: 0, max: Infinity },
+      "Bonus Key": { count: 0, max: Infinity },
+      "Trap (Skull)": { count: 0, max: Infinity },
+      "Chosen Choice": { count: 0, max: Infinity }
+    };
+
+    let spins = 0;
+    let playerQueue = Array.from({ length: 15 }, (_, i) => `Player ${i + 1}`);
+    let currentIndex = 0;
+    const playerResults = {};
+
+    const layout = [
+      "Golden Gumball", "Coin", "Miss A Turn", "Key", "Remote",
+      "Coin", "Key", "Spin Again", "Watch", "Key",
+      "Coin", "Key", "Steal", "Pick Choice", "Key",
+      "Wildcard Prize", "Coin", "Bonus Key", "Miss A Turn", "Trap (Skull)",
+      "Chosen Choice"
+    ];
+
+    function updateDisplay() {
+      const statusDiv = document.getElementById("status");
+      let html = `<strong>Total Spins:</strong> ${spins}<br><br>`;
+      for (const [name, data] of Object.entries(prizes)) {
+        html += `${name}: ${data.count} ${data.max === Infinity ? "" : "/ " + data.max}<br>`;
+      }
+      statusDiv.innerHTML = html;
+
+      layout.forEach((prize, index) => {
+        const btn = document.getElementById(`btn-${index}`);
+        const { count, max } = prizes[prize];
+        btn.disabled = count >= max;
+      });
+
+      updatePlayerTable();
+    }
+
+    function updatePlayerTable() {
+      const table = document.getElementById("playerTable");
+      table.innerHTML = "";
+      for (let i = 0; i < 15; i++) {
+        const player = `Player ${i + 1}`;
+        const prize = playerResults[player] || "";
+        table.innerHTML += `<tr><td>${player}</td><td>${prize}</td></tr>`;
+      }
+    }
+
+    function handleClick(prize) {
+      if (currentIndex >= playerQueue.length) return;
+      const currentPlayer = playerQueue[currentIndex];
+
+      prizes[prize].count++;
+      spins++;
+
+      if (prize === "Miss A Turn") {
+        playerQueue.push(currentPlayer);
+      } else {
+        playerResults[currentPlayer] = prize;
+      }
+
+      currentIndex++;
+      updateDisplay();
+    }
+
+    function resetGame() {
+      for (const key in prizes) {
+        prizes[key].count = 0;
+      }
+      spins = 0;
+      currentIndex = 0;
+      playerQueue = Array.from({ length: 15 }, (_, i) => `Player ${i + 1}`);
+      for (const p in playerResults) delete playerResults[p];
+      updateDisplay();
+    }
+
+    function init() {
+      const grid = document.getElementById("buttons");
+      layout.forEach((prize, index) => {
+        const btn = document.createElement("button");
+        btn.id = `btn-${index}`;
+        btn.innerText = prize;
+        btn.onclick = () => handleClick(prize);
+        grid.appendChild(btn);
+      });
+      updateDisplay();
+    }
+
+    init();
+  </script>
+</body>
+</html>
